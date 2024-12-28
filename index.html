@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Godot-like Interface with Drawing Feature</title>
+
+    <!-- إضافة مكتبة CodeMirror من CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2d2d2d;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: white;
+        }
+
+        header {
+            background-color: #1e1e1e;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header button {
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: #222;
+            width: 250px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar .section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar .section h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .sidebar button {
+            background-color: #333;
+            border: none;
+            color: white;
+            padding: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .sidebar select, .sidebar input {
+            background-color: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        .editor {
+            flex: 1;
+            background-color: #3b3b3b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .editor .scene {
+            width: 80%;
+            height: 80%;
+            background-color: #444;
+            border: 1px solid #666;
+            position: relative;
+        }
+
+        .status-bar {
+            background-color: #1e1e1e;
+            color: white;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .node {
+            position: absolute;
+            cursor: move;
+        }
+
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 50px solid;
+        }
+
+        /* JS Editor */
+        #jsEditor {
+            width: 100%;
+            height: 150px;
+            background-color: #222;
+            color: white;
+            border: 1px solid #666;
+            padding: 10px;
+            font-family: monospace;
+            resize: none;
+            margin-bottom: 10px;
+        }
+        #rung{
+          width: 70%;
+          height: 420px;
+          z-index: 100;
+          position: absolute;
+          top: 50px;
+          left: 13%;
+        }
+        #menug{
+          background-color: #999999;
+        }
+        #cls{
+          position: absolute;
+          left: 94%;
+          background-color: #777777;
+          border: 1px;
+        }
+        #res{
+          width: 100%;
+          height: 395px;
+          /*background-color: #ffff00;*/
+          position: absolute;
+          top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div>Godot-like Interface</div>
+    <div>
+        <button id="runBtn">Run</button>
+        <button id="stopBtn" style="display: none;">Stop</button>
+    </div>
+</header>
+
+<div class="main-container">
+    <div class="sidebar">
+        <div class="section">
+            <h3>Scene</h3>
+            <button id="saveSceneBtn">Save Scene</button>
+            <button id="drawShapeBtn">Draw Shape</button> <!-- زر رسم الأشكال -->
+            <select id="shapeSelector">
+                <option value="rectangle">Rectangle</option>
+                <option value="circle">Circle</option>
+                <option value="triangle">Triangle</option>
+            </select>
+            <input type="color" id="shapeColor" value="#ff5733">
+            <input type="text" id="shapeId" placeholder="Shape ID" />
+            <input type="number" id="shapeWidth" placeholder="Width" />
+            <input type="number" id="shapeHeight" placeholder="Height" />
+        </div>
+        <div class="section">
+            <h3>Inspector</h3>
+            <button id="selectObjectBtn">Select Object</button>
+            <button id="editPropertiesBtn">Edit Properties</button>
+        </div>
+        <div class="section">
+            <h3>Project</h3>
+            <button id="newProjectBtn">New Project</button>
+            <button id="openProjectBtn">Open Project</button>
+        </div>
+        <div class="section">
+            <h3>JavaScript Editor</h3>
+            <!-- إضافة حاوية CodeMirror بدلاً من textarea -->
+            <textarea id="jsEditor" placeholder="Write your JS code here..."></textarea>
+            <button id="runJSBtn">Run JS Code</button>
+        </div>
+    </div>
+
+    <div class="editor" id="ED">
+        <div class="scene" id="sceneArea">
+            <!-- سيتم رسم الكائنات هنا -->
+        </div>
+    </div>
+</div>
+
+<div class="status-bar" id="statusBar">
+    Status: Idle
+</div>
+
+<dialog id="rung" open>
+  <div id="menug">
+    <button id="cls">Close</button>
+  </div>
+  
+  <iframe id="res">
+    
+  </iframe>
+</dialog>
+
+<script>
+
+document.getElementById("cls").onclick = ()=>{
+  var rung = document.getElementById("rung");
+  rung.removeAttribute('open');
+  
+  var sv = document.getElementById('ED').value;
+  var rv = document.getElementById('res');
+  var jsc = document.getElementById('jsEditor').value;
+  
+  /*rv.contentDocument.body.innerHTML = sv.value;
+  rv.contentWindow.eval(jsc);*/
+  
+  rv.innerHTML = sv;
+    
+}
+  
+  
+  
+  
+  
+  
+  
+    // متغير للتحقق من حالة التشغيل
+    let isRunning = false;
+  
+    // إضافة الأحداث للزر "تشغيل" و "إيقاف"
+    document.getElementById('runBtn').addEventListener('click', () => {
+        isRunning = true; // تغيير الحالة إلى تشغيل
+        document.querySelector('#statusBar').textContent = "Status: Running";
+        
+        document.getElementById("rung").setAttribute('open','true');
+        const jsCode = editor.getValue();
+        
+        try {
+            // تنفيذ الكود المدخل
+          new Function(jsCode)();
+          document.querySelector('#statusBar').textContent = "Status: JS Code Executed";
+        } catch (e) {
+            document.querySelector('#statusBar').textContent = `Status: Error in JS Code: ${e.message}`;
+        }
+        
+        document.getElementById('runBtn').style.display = "none";
+        document.getElementById('stopBtn').style.display = "inline-block";
+
+        // تعطيل السحب أثناء التشغيل
+        disableDragging();
+    });
+
+    document.getElementById('stopBtn').addEventListener('click', () => {
+        isRunning = false; // تغيير الحالة إلى إيقاف
+        document.querySelector('#statusBar').textContent = "Status: Stopped";
+        document.getElementById('stopBtn').style.display = "none";
+        document.getElementById('runBtn').style.display = "inline-block";
+
+        // تمكين السحب بعد الإيقاف
+        enableDragging();
+    });
+
+    // إضافة وظيفة رسم الأشكال عندما ينقر المستخدم في المشهد
+    document.getElementById('drawShapeBtn').addEventListener('click', () => {
+        document.getElementById('sceneArea').addEventListener('click', (e) => {
+            if (isRunning) return; // لا رسم إذا كان الوضع في تشغيل
+
+            // الحصول على إحداثيات النقر
+            const rect = document.getElementById('sceneArea').getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // الحصول على الشكل المحدد واللون والمعرف
+            const selectedShape = document.getElementById('shapeSelector').value;
+            const shapeColor = document.getElementById('shapeColor').value;
+            const shapeId = document.getElementById('shapeId').value;
+            const shapeWidth = parseInt(document.getElementById('shapeWidth').value) || 100;
+            const shapeHeight = parseInt(document.getElementById('shapeHeight').value) || 100;
+
+            // إنشاء الشكل بناءً على الاختيارات
+            let shape;
+            if (selectedShape === 'rectangle') {
+                shape = document.createElement('div');
+                shape.style.width = `${shapeWidth}px`;
+                shape.style.height = `${shapeHeight}px`;
+                shape.style.backgroundColor = shapeColor;
+            } else if (selectedShape === 'circle') {
+                shape = document.createElement('div');
+                shape.style.width = `${shapeWidth}px`;
+                shape.style.height = `${shapeHeight}px`;
+                shape.style.backgroundColor = shapeColor;
+                shape.style.borderRadius = '50%';
+            } else if (selectedShape === 'triangle') {
+                shape = document.createElement('div');
+                shape.classList.add('triangle');
+                shape.style.borderBottomColor = shapeColor;
+                shape.style.borderLeft = `${shapeWidth / 2}px solid transparent`;
+                shape.style.borderRight = `${shapeWidth / 2}px solid transparent`;
+                shape.style.borderBottom = `${shapeHeight}px solid ${shapeColor}`;
+            }
+
+            shape.classList.add('node');
+            shape.style.left = `${x - shapeWidth / 2}px`; // ضبط الموقع بناءً على الإحداثيات
+            shape.style.top = `${y - shapeHeight / 2}px`;
+            shape.id = shapeId; // تعيين ID للشكل
+
+            // إضافة الشكل إلى المشهد
+            document.getElementById('sceneArea').appendChild(shape);
+
+            // تمكين السحب
+            makeNodeDraggable(shape);
+        });
+    });
+
+    // وظيفة تمكين السحب للعقد
+    function makeNodeDraggable(node) {
+        let offsetX, offsetY, isDragging = false;
+
+        node.addEventListener('mousedown', (e) => {
+            if (isRunning) return; // منع السحب إذا كان الوضع في تشغيل
+            isDragging = true;
+            offsetX = e.clientX - node.getBoundingClientRect().left;
+            offsetY = e.clientY - node.getBoundingClientRect().top;
+            document.body.style.cursor = 'move';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                node.style.left = `${e.clientX - offsetX}px`;
+                node.style.top = `${e.clientY - offsetY}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+        });
+    }
+
+    // وظيفة لتعطيل السحب
+    function disableDragging() {
+        const nodes = document.querySelectorAll('.node');
+        nodes.forEach(node => {
+            node.style.pointerEvents = 'none'; // تعطيل السحب
+        });
+    }
+
+    // وظيفة لتمكين السحب
+    function enableDragging() {
+        const nodes = document.querySelectorAll('.node');
+        nodes.forEach(node => {
+            node.style.pointerEvents = 'auto'; // تمكين السحب
+        });
+    }
+
+    // إضافة وظائف لتحديد الكائنات وتحرير الخصائص
+    document.getElementById('selectObjectBtn').addEventListener('click', () => {
+        document.querySelector('#statusBar').textContent = "Status: Selecting Object...";
+    });
+
+    document.getElementById('editPropertiesBtn').addEventListener('click', () => {
+        document.querySelector('#statusBar').textContent = "Status: Editing Properties...";
+    });
+
+    // إضافة وظائف لإنشاء مشاريع جديدة وفتحها
+    document.getElementById('newProjectBtn').addEventListener('click', () => {
+        alert("New Project Created!");
+    });
+
+    document.getElementById('openProjectBtn').addEventListener('click', () => {
+        alert("Project Opened!");
+    });
+
+    // تنفيذ كود JavaScript المدخل من قبل المستخدم
+    document.getElementById('runJSBtn').addEventListener('click', () => {
+        //const jsCode = editor.getValue(); // استخدام القيمة من CodeMirror
+        /*try {
+            // تنفيذ الكود المدخل
+            new Function(jsCode)();
+            document.querySelector('#statusBar').textContent = "Status: JS Code Executed";
+        } catch (e) {
+            document.querySelector('#statusBar').textContent = `Status: Error in JS Code: ${e.message}`;
+        }*/
+    });
+
+    // تهيئة CodeMirror لمحرر الـ JavaScript
+    const editor = CodeMirror.fromTextArea(document.getElementById('jsEditor'), {
+        lineNumbers: true,
+        mode: "javascript",
+        theme: "dracula", // استخدم موضوع "dracula" أو اختر آخر
+        matchBrackets: true,
+    });
+</script>
+
+</body>
+</html>
